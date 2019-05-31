@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+        <meta charset="utf-8">
+        <title>bwaite3</title>
+		<script src="../lib/d3.v5.min.js"></script>
+		<style>
+		  .pagebreak { page-break-before: always; } /* page-break-after works, as well */
+		  
+		  .chart-row {
+			display: flex;
+			padding: 30px 30px 30px 30px;
+		  }
+		  .grid line {
+		    stroke: lightgrey;
+		    stroke-opacity: 0.6;
+		    shape-rendering: crispEdges;
+		  }
+		  .grid path {
+		    stroke-width: 0;
+		  }
+		</style>
+	</head>
+	<body>
+		<div class="chart-row">
+			<div id="chart1"></div>
+		</div>
+		<div class="pagebreak"> </div>
+		<div class="chart-row">
+			<div id="chart2"></div>
+		</div>
+		<div class="pagebreak"> </div>
+		<div class="chart-row">
+			<div id="chart3"></div>
+		</div>
+		<div class="pagebreak"> </div>
+		<div class="chart-row">
+			<div id="chart4"></div>
+		</div>
+		<div class="pagebreak"> </div>
+		<div class="chart-row">
+			<div id="chart5"></div>
+		</div>	
+		<script type="text/javascript">
+
+			// set the dimensions of the canvas
+			var margin = {top: 20, right: 20, bottom: 70, left: 40},
+		    	width = 900 - margin.left - margin.right,
+		    	height = 600 - margin.top - margin.bottom,
+		    	padding = 50;
+
+		    // load symbols
+		    var symbol = d3.symbol()
+
+		    // load data
+			d3.csv("movies.csv").then(function(data) {
+
+			    data.forEach(function(d) {
+			        d.Rating = +d.Rating;
+			        d.WinsNoms = +d.WinsNoms;
+			        d.IsGoodRating = +d.IsGoodRating;
+			    });
+
+			console.log(data)
+		    // set the ranges
+		    var xScale = d3.scaleLinear()
+		        .domain([d3.min(data, function(d) {return d.Rating;}) - .1, .1 + d3.max(data, function(d) {return d.Rating;})])
+		        .range([padding, width - padding]);
+		    var yScale = d3.scaleLinear()
+		        .domain([0, d3.max(data, function(d) {return d.WinsNoms;})])
+		        .range([height - padding, padding]);
+
+		    // define the axis
+			var xAxis = d3.axisBottom(xScale).ticks(20);
+		 	var yAxis = d3.axisLeft(yScale);
+
+			// add the SVG element
+			var svg = d3.select("#chart1")
+				.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+			// add points
+			svg.selectAll("dot")
+			    .data(data)
+			    .enter()
+			    .append("path")
+			    .attr("d", symbol.type(function(d) {
+			    	if (d.IsGoodRating==1) { return d3.symbolCross}
+			    	else { return d3.symbolCircle}
+			    }))
+			    .attr("d", symbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + xScale(d.Rating) + "," + yScale(d.WinsNoms) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", function(d) {
+			    	if (d.IsGoodRating==1) { return "blue"}
+			    	else { return "red"}
+			    });
+
+			// add axis
+			svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(0," + (height - padding) + ")")
+                .call(xAxis)
+
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(" + padding + ",0)")
+                .call(yAxis);
+
+            //add title
+            svg.append("text")
+                .attr("x", (width / 3))             
+                .attr("y", 0 - (margin.top / 10))
+                .attr("text-anchor", "middle")  
+                .text("Wins+Nominations vs. Rating")
+                .style("font-size", "18px")
+                .style("font-weight", 600);
+
+            // add axis labels
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", width)
+                .attr("y", height - padding - 10)
+                .text("Rating")
+                .style("font-size", "14px");
+
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", padding-100)
+                .attr("y", padding+ 15)
+                .attr("transform", "rotate(-90)")
+                .text("Wins+Noms")
+                .style("font-size", "14px");
+
+            // add gridlines
+			function x_gridlines() {		
+			    return d3.axisBottom(xScale).ticks(20)
+			}
+
+			function y_gridlines() {		
+    			return d3.axisLeft(yScale).ticks(10)
+			}
+
+  			svg.append("g")
+  				.attr("class", "grid")
+  			    .attr("transform", "translate(1," + (height - padding) + ")")
+  			    .style("stroke-dasharray", "5 5")
+  			    .call(x_gridlines()
+  			    	.tickSize(-height+98.5)
+  			    	.tickFormat(""));
+
+			svg.append("g")
+				.attr("class", "grid")
+				.attr("transform", "translate(" + padding + ",1)")
+				.style("stroke-dasharray", "5 5")
+			    .call(y_gridlines()
+			    	.tickSize(-width+98.5)
+			    	.tickFormat(""));
+
+			// add legend
+			svg.append("text")
+			    .attr("text-anchor", "start")
+			    .attr("x", width - padding + 15)
+			    .attr("y", padding + 10)
+			    .text("bad rating")
+			    .style("font-size", "12px");
+
+			svg.append("text")
+			    .attr("text-anchor", "start")
+			    .attr("x", width - padding + 15)
+			    .attr("y", padding + 30)
+			    .text("good rating")
+			    .style("font-size", "12px");
+
+			svg.append("path")
+			    .attr("d", symbol.type(d3.symbolCircle))
+			    .attr("d", symbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + (width - padding + 9) + "," + (padding + 6) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", "red");
+
+			svg.append("path")
+			    .attr("d", symbol.type(d3.symbolCross))
+			    .attr("d", symbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + (width - padding + 9) + "," + (padding + 27) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", "blue");
+		});
+		</script>
+		<script type="text/javascript">
+
+
+		    // load data
+			d3.csv("movies.csv").then(function(data) {
+
+			    data.forEach(function(d) {
+			        d.Rating = +d.Rating;
+			        d.Budget = +d.Budget;
+			        d.IsGoodRating = +d.IsGoodRating;
+			    });
+
+		    // set the ranges
+		    var xScale = d3.scaleLinear()
+		        .domain([d3.min(data, function(d) {return d.Rating;}) - .1, .1 + d3.max(data, function(d) {return d.Rating;})])
+		        .range([padding, width - padding]);
+		    var yScale = d3.scaleLinear()
+		        .domain([0, d3.max(data, function(d) {return d.Budget;})])
+		        .range([height - padding, padding]);
+
+		    // define the axis
+			var xAxis = d3.axisBottom(xScale).ticks(20);
+		 	var yAxis = d3.axisLeft(yScale);
+
+			// add the SVG element
+			var svg = d3.select("#chart2")
+				.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+			// add points
+			svg.selectAll("dot")
+			    .data(data)
+			    .enter()
+			    .append("path")
+			    .attr("d", symbol.type(function(d) {
+			    	if (d.IsGoodRating==1) { return d3.symbolCross}
+			    	else { return d3.symbolCircle}
+			    }))
+			    .attr("d", symbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + xScale(d.Rating) + "," + yScale(d.Budget) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", function(d) {
+			    	if (d.IsGoodRating==1) { return "blue"}
+			    	else { return "red"}
+			    });
+
+			// add axis
+			svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(0," + (height - padding) + ")")
+                .call(xAxis)
+
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(" + padding + ",0)")
+                .call(yAxis);
+
+            //add title
+            svg.append("text")
+                .attr("x", (width / 3))             
+                .attr("y", 0 - (margin.top / 10))
+                .attr("text-anchor", "middle")  
+                .text("Budget vs. Rating")
+                .style("font-size", "18px")
+                .style("font-weight", 600);
+
+            // add axis labels
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", width)
+                .attr("y", height - padding - 10)
+                .text("Rating")
+                .style("font-size", "14px");
+
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", padding-100)
+                .attr("y", padding+ 15)
+                .attr("transform", "rotate(-90)")
+                .text("Budget")
+                .style("font-size", "14px");
+
+            // add gridlines
+			function x_gridlines() {		
+			    return d3.axisBottom(xScale).ticks(20)
+			}
+
+			function y_gridlines() {		
+    			return d3.axisLeft(yScale).ticks(10)
+			}
+
+  			svg.append("g")
+  				.attr("class", "grid")
+  			    .attr("transform", "translate(1," + (height - padding) + ")")
+  			    .style("stroke-dasharray", "5 5")
+  			    .call(x_gridlines()
+  			    	.tickSize(-height+98.5)
+  			    	.tickFormat(""));
+
+			svg.append("g")
+				.attr("class", "grid")
+				.attr("transform", "translate(" + padding + ",1)")
+				.style("stroke-dasharray", "5 5")
+			    .call(y_gridlines()
+			    	.tickSize(-width+98.5)
+			    	.tickFormat(""));
+
+			// add legend
+			svg.append("text")
+			    .attr("text-anchor", "start")
+			    .attr("x", width - padding + 15)
+			    .attr("y", padding + 10)
+			    .text("bad rating")
+			    .style("font-size", "12px");
+
+			svg.append("text")
+			    .attr("text-anchor", "start")
+			    .attr("x", width - padding + 15)
+			    .attr("y", padding + 30)
+			    .text("good rating")
+			    .style("font-size", "12px");
+
+			svg.append("path")
+			    .attr("d", symbol.type(d3.symbolCircle))
+			    .attr("d", symbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + (width - padding + 9) + "," + (padding + 6) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", "red");
+
+			svg.append("path")
+			    .attr("d", symbol.type(d3.symbolCross))
+			    .attr("d", symbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + (width - padding + 9) + "," + (padding + 27) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", "blue");
+		});
+
+		</script>
+		<script type="text/javascript">
+
+
+		    // load data
+			d3.csv("movies.csv").then(function(data) {
+
+			    data.forEach(function(d) {
+			        d.Rating = +d.Rating;
+			        d.Votes = +d.Votes;
+			        d.IsGoodRating = +d.IsGoodRating;
+			        d.WinsNoms = +d.WinsNoms;
+			    });
+
+		    // set the ranges
+		    var xScale = d3.scaleLinear()
+		        .domain([d3.min(data, function(d) {return d.Rating;}) - .1, .1 + d3.max(data, function(d) {return d.Rating;})])
+		        .range([padding, width - padding]);
+		    var yScale = d3.scaleLinear()
+		        .domain([0, d3.max(data, function(d) {return d.Votes;})])
+		        .range([height - padding, padding]);
+
+		    // define the axis
+			var xAxis = d3.axisBottom(xScale).ticks(20);
+		 	var yAxis = d3.axisLeft(yScale);
+
+			// add the SVG element
+			var svg = d3.select("#chart3")
+				.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            // add scale for size of points by feature 10
+            var ratingScale = d3.scaleLinear()
+                .domain([d3.min(data, function(d) {return d.WinsNoms;}), + d3.max(data, function(d) {return d.WinsNoms;})])
+                .range([18, 125]);
+
+			// add points
+			svg.selectAll("dot")
+			    .data(data)
+			    .enter()
+			    .append("path")
+			    .attr("d", symbol.type(function(d) {
+			    	if (d.IsGoodRating==1) { return d3.symbolCross}
+			    	else { return d3.symbolCircle}
+			    }))
+			    //.attr("d", symbol.size(18))
+			    .attr("d", symbol.size(function(d) {return ratingScale(d.WinsNoms);}))
+			    .attr("transform", function(d) { return "translate(" + xScale(d.Rating) + "," + yScale(d.Votes) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", function(d) {
+			    	if (d.IsGoodRating==1) { return "blue"}
+			    	else { return "red"}
+			    });
+
+			// add axis
+			svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(0," + (height - padding) + ")")
+                .call(xAxis)
+
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(" + padding + ",0)")
+                .call(yAxis);
+
+            //add title
+            svg.append("text")
+                .attr("x", (width / 3))             
+                .attr("y", 0 - (margin.top / 10))
+                .attr("text-anchor", "middle")  
+                .text("Votes vs. Rating sized by Wins+Nominations")
+                .style("font-size", "18px")
+                .style("font-weight", 600);
+
+            // add axis labels
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", width)
+                .attr("y", height - padding - 10)
+                .text("Rating")
+                .style("font-size", "14px");
+
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", padding-100)
+                .attr("y", padding+ 15)
+                .attr("transform", "rotate(-90)")
+                .text("Votes")
+                .style("font-size", "14px");
+
+            // add gridlines
+			function x_gridlines() {		
+			    return d3.axisBottom(xScale).ticks(20)
+			}
+
+			function y_gridlines() {		
+    			return d3.axisLeft(yScale).ticks(10)
+			}
+
+  			svg.append("g")
+  				.attr("class", "grid")
+  			    .attr("transform", "translate(1," + (height - padding) + ")")
+  			    .style("stroke-dasharray", "5 5")
+  			    .call(x_gridlines()
+  			    	.tickSize(-height+98.5)
+  			    	.tickFormat(""));
+
+			svg.append("g")
+				.attr("class", "grid")
+				.attr("transform", "translate(" + padding + ",1)")
+				.style("stroke-dasharray", "5 5")
+			    .call(y_gridlines()
+			    	.tickSize(-width+98.5)
+			    	.tickFormat(""));
+
+			// add legend
+		    var legendSymbol = d3.symbol()
+
+			svg.append("text")
+			    .attr("text-anchor", "start")
+			    .attr("x", width - padding + 15)
+			    .attr("y", padding + 10)
+			    .text("bad rating")
+			    .style("font-size", "12px");
+
+			svg.append("text")
+			    .attr("text-anchor", "start")
+			    .attr("x", width - padding + 15)
+			    .attr("y", padding + 30)
+			    .text("good rating")
+			    .style("font-size", "12px");
+
+			svg.append("path")
+			    .attr("d", legendSymbol.type(d3.symbolCircle))
+			    .attr("d", legendSymbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + (width - padding + 9) + "," + (padding + 6) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", "red");
+
+			svg.append("path")
+			    .attr("d", legendSymbol.type(d3.symbolCross))
+			    .attr("d", legendSymbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + (width - padding + 9) + "," + (padding + 27) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", "blue");
+		});
+	</script>
+		<script type="text/javascript">
+
+			// set the dimensions of the canvas
+			var margin = {top: 20, right: 20, bottom: 70, left: 40},
+		    	width = 900 - margin.left - margin.right,
+		    	height = 600 - margin.top - margin.bottom,
+		    	padding = 50;
+
+		    // load symbols
+		    var symbol = d3.symbol()
+
+		    // load data
+			d3.csv("movies.csv").then(function(data) {
+
+			    data.forEach(function(d) {
+			        d.Rating = +d.Rating;
+			        d.WinsNoms = +d.WinsNoms;
+			        d.IsGoodRating = +d.IsGoodRating;
+			    });
+
+		    // set the ranges
+		    var xScale = d3.scaleLinear()
+		        .domain([d3.min(data, function(d) {return d.Rating;}) - .1, .1 + d3.max(data, function(d) {return d.Rating;})])
+		        .range([padding, width - padding]);
+		    var yScale = d3.scaleSqrt()
+		        .domain([0, d3.max(data, function(d) {return d.WinsNoms;})])
+		        .range([height - padding, padding]);
+
+		    // define the axis
+			var xAxis = d3.axisBottom(xScale).ticks(20);
+		 	var yAxis = d3.axisLeft(yScale);
+
+			// add the SVG element
+			var svg = d3.select("#chart4")
+				.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+			// add points
+			svg.selectAll("dot")
+			    .data(data)
+			    .enter()
+			    .append("path")
+			    .attr("d", symbol.type(function(d) {
+			    	if (d.IsGoodRating==1) { return d3.symbolCross}
+			    	else { return d3.symbolCircle}
+			    }))
+			    .attr("d", symbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + xScale(d.Rating) + "," + yScale(d.WinsNoms) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", function(d) {
+			    	if (d.IsGoodRating==1) { return "blue"}
+			    	else { return "red"}
+			    });
+
+			// add axis
+			svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(0," + (height - padding) + ")")
+                .call(xAxis)
+
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(" + padding + ",0)")
+                .call(yAxis);
+
+            //add title
+            svg.append("text")
+                .attr("x", (width / 3))             
+                .attr("y", 0 - (margin.top / 10))
+                .attr("text-anchor", "middle")  
+                .text("Wins+Nominations (square-root-scaled) vs. Rating")
+                .style("font-size", "18px")
+                .style("font-weight", 600);
+
+            // add axis labels
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", width)
+                .attr("y", height - padding - 10)
+                .text("Rating")
+                .style("font-size", "14px");
+
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", padding-100)
+                .attr("y", padding+ 15)
+                .attr("transform", "rotate(-90)")
+                .text("Wins+Noms")
+                .style("font-size", "14px");
+
+            // add gridlines
+			function x_gridlines() {		
+			    return d3.axisBottom(xScale).ticks(20)
+			}
+
+			function y_gridlines() {		
+    			return d3.axisLeft(yScale).ticks(10)
+			}
+
+  			svg.append("g")
+  				.attr("class", "grid")
+  			    .attr("transform", "translate(1," + (height - padding) + ")")
+  			    .style("stroke-dasharray", "5 5")
+  			    .call(x_gridlines()
+  			    	.tickSize(-height+98.5)
+  			    	.tickFormat(""));
+
+			svg.append("g")
+				.attr("class", "grid")
+				.attr("transform", "translate(" + padding + ",1)")
+				.style("stroke-dasharray", "5 5")
+			    .call(y_gridlines()
+			    	.tickSize(-width+98.5)
+			    	.tickFormat(""));
+
+			// add legend
+			svg.append("text")
+			    .attr("text-anchor", "start")
+			    .attr("x", width - padding + 15)
+			    .attr("y", padding + 10)
+			    .text("bad rating")
+			    .style("font-size", "12px");
+
+			svg.append("text")
+			    .attr("text-anchor", "start")
+			    .attr("x", width - padding + 15)
+			    .attr("y", padding + 30)
+			    .text("good rating")
+			    .style("font-size", "12px");
+
+			svg.append("path")
+			    .attr("d", symbol.type(d3.symbolCircle))
+			    .attr("d", symbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + (width - padding + 9) + "," + (padding + 6) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", "red");
+
+			svg.append("path")
+			    .attr("d", symbol.type(d3.symbolCross))
+			    .attr("d", symbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + (width - padding + 9) + "," + (padding + 27) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", "blue");
+		});
+		</script>
+		<script type="text/javascript">
+
+			// set the dimensions of the canvas
+			var margin = {top: 20, right: 20, bottom: 70, left: 40},
+		    	width = 900 - margin.left - margin.right,
+		    	height = 600 - margin.top - margin.bottom,
+		    	padding = 50;
+
+		    // load symbols
+		    var symbol = d3.symbol()
+
+		    // load data
+			d3.csv("movies.csv").then(function(data) {
+
+			    data.forEach(function(d) {
+			        d.Rating = +d.Rating;
+			        d.WinsNoms = +d.WinsNoms;
+			        d.IsGoodRating = +d.IsGoodRating;
+			    });
+
+		    // set the ranges
+		    var xScale = d3.scaleLinear()
+		        .domain([d3.min(data, function(d) {return d.Rating;}) - .1, .1 + d3.max(data, function(d) {return d.Rating;})])
+		        .range([padding, width - padding]);
+		    var yScale = d3.scaleLog().clamp(true)	
+		        .domain([1e-6, d3.max(data, function(d) {return d.WinsNoms;})])
+		        .range([height - padding, padding]);
+
+		    // define the axis
+			var xAxis = d3.axisBottom(xScale).ticks(20);
+		 	var yAxis = d3.axisLeft(yScale);
+
+			// add the SVG element
+			var svg = d3.select("#chart5")
+				.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+			// add points
+			svg.selectAll("dot")
+			    .data(data)
+			    .enter()
+			    .append("path")
+			    .attr("d", symbol.type(function(d) {
+			    	if (d.IsGoodRating==1) { return d3.symbolCross}
+			    	else { return d3.symbolCircle}
+			    }))
+			    .attr("d", symbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + xScale(d.Rating) + "," + yScale(d.WinsNoms) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", function(d) {
+			    	if (d.IsGoodRating==1) { return "blue"}
+			    	else { return "red"}
+			    });
+
+			// add axis
+			svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(0," + (height - padding) + ")")
+                .call(xAxis)
+
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(" + padding + ",0)")
+                .call(yAxis);
+
+            //add title
+            svg.append("text")
+                .attr("x", (width / 3))             
+                .attr("y", 0 - (margin.top / 10))
+                .attr("text-anchor", "middle")  
+                .text("Wins+Nominations (log-scaled) vs. Rating")
+                .style("font-size", "18px")
+                .style("font-weight", 600);
+
+            // add axis labels
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", width)
+                .attr("y", height - padding - 10)
+                .text("Rating")
+                .style("font-size", "14px");
+
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", padding-100)
+                .attr("y", padding+ 15)
+                .attr("transform", "rotate(-90)")
+                .text("Wins+Noms")
+                .style("font-size", "14px");
+
+            // add gridlines
+			function x_gridlines() {		
+			    return d3.axisBottom(xScale).ticks(20)
+			}
+
+			function y_gridlines() {		
+    			return d3.axisLeft(yScale).ticks(10)
+			}
+
+  			svg.append("g")
+  				.attr("class", "grid")
+  			    .attr("transform", "translate(1," + (height - padding) + ")")
+  			    .style("stroke-dasharray", "5 5")
+  			    .call(x_gridlines()
+  			    	.tickSize(-height+98.5)
+  			    	.tickFormat(""));
+
+			svg.append("g")
+				.attr("class", "grid")
+				.attr("transform", "translate(" + padding + ",1)")
+				.style("stroke-dasharray", "5 5")
+			    .call(y_gridlines()
+			    	.tickSize(-width+98.5)
+			    	.tickFormat(""));
+
+			// add legend
+			svg.append("text")
+			    .attr("text-anchor", "start")
+			    .attr("x", width - padding + 15)
+			    .attr("y", padding + 10)
+			    .text("bad rating")
+			    .style("font-size", "12px");
+
+			svg.append("text")
+			    .attr("text-anchor", "start")
+			    .attr("x", width - padding + 15)
+			    .attr("y", padding + 30)
+			    .text("good rating")
+			    .style("font-size", "12px");
+
+			svg.append("path")
+			    .attr("d", symbol.type(d3.symbolCircle))
+			    .attr("d", symbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + (width - padding + 9) + "," + (padding + 6) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", "red");
+
+			svg.append("path")
+			    .attr("d", symbol.type(d3.symbolCross))
+			    .attr("d", symbol.size(18))
+			    .attr("transform", function(d) { return "translate(" + (width - padding + 9) + "," + (padding + 27) + ")";})
+			    .attr("fill", "transparent")
+			    .attr("stroke", "blue");
+		});
+		</script>
+	</body>
+</html>

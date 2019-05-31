@@ -1,0 +1,5 @@
+Q3.a.2
+The combination Wins+Noms vs. Rating is the better feature combination for separating the classes because there is a more visually evident relationship between the variables. It is clear in the first scatterplot that larger Wins+Noms numbers occur frequently with better ratings, indicating a strong relationship.
+
+Q3.c
+A square root scale is useful because it spreads the smaller points range which helps in demonstrating the relationship between the variables. A log scale is useful in this case because it shrinks the range of larger values and increases the range for smaller values, making them more visible.

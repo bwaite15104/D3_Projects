@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+        <meta charset="utf-8">
+        <title>bwaite3</title>
+		<script src="../lib/d3.v5.min.js"></script>
+		<script src="../lib/topojson.v2.min.js"></script>
+		<script src="../lib/d3-scale-chromatic.v1.min.js"></script>
+		<script src="../lib/d3-tip.min.js"></script>
+		<style>
+
+			rect.border {
+				stroke: #ffffff;
+		        stroke-width:2px;
+			}
+
+			.legend-text {
+				stroke: #808080;
+				font-size: 12px;
+			}
+
+			.d3-tip {
+			  line-height: 1;
+			  padding: 3px;
+			  background: rgba(75, 0, 130, 0.7);
+			  color: #fff;
+			  border-radius: 8px;
+			  text-align: left;
+			}
+
+			.d3-tip.down {
+			  -webkit-transform: translate(0, 8em);
+			  transform: translate(0, 8em);
+			}
+
+			.d3-tip.left {
+			  -webkit-transform: translate(5em);
+			  transform: translate(5em);
+			}
+			.d3-tip.topleft {
+			  -webkit-transform: translate(5em, 8em);
+			  transform: translate(5em, 8em);
+			}
+			.d3-tip.alaska {
+			  -webkit-transform: translate(8em);
+			  transform: translate(8em);
+			}
+
+		</style>
+	</head>
+	<body>
+		<div id="chart1"></div>
+		<script type="text/javascript">
+
+			// set margins and padding
+			var margin = {top: 20, right: 20, bottom: 20, left: 20},
+		    	width = 1100 - margin.left - margin.right,
+		    	height = 640 - margin.top - margin.bottom,
+		    	padding = 50;
+
+        	// make color list
+        	var colors = d3.scaleQuantile()
+        		.range(d3.schemeGreens[9]);
+
+        	// make legend scale
+        	var yScale = d3.scaleLinear()
+        		.domain(d3.extent(colors.domain()))
+        		.rangeRound([0, 260]);
+
+		    // add svg element
+		    var svg = d3.select("#chart1")
+		    	.append("svg")
+		    	.attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+			// define path generator
+			var path = d3.geoPath();
+
+			// load data using promises
+			var promises = [
+			  d3.csv("county_poverty.csv"),
+			  d3.csv("county_detail.csv"),
+			  d3.json("us.json")
+			]
+
+			Promise.all(promises).then(ready)
+
+			function ready([county_poverty, county_detail, us]) {
+
+				// parse poverty
+				county_poverty.forEach(function(d) {
+					d.Poverty = +d.Poverty;
+
+				});
+
+				// set color domain	based on poverty
+				colors.domain([0, 10, d3.max(county_poverty, function(d) {return d;})]);
+
+				// parse details 
+				county_detail.forEach(function(d) {
+					d.TotalPop = +d.TotalPop;
+					d.IncomePerCap = +d.IncomePerCap;
+				});
+
+
+						// convert topo to geo
+						var usGeoJSON = topojson.feature(us, us.objects.counties);
+
+						// merge poverty data with topoJSON data
+						for (var i = 0; i < county_poverty.length; i++) {
+
+							// get county id
+							var dataId = county_poverty[i].CensusId;
+
+							// get value of poverty
+							var povertyValue = parseFloat(county_poverty[i].Poverty);
+
+							// loop through geojson and append poverty value
+							for (var j = 0; j < usGeoJSON.features.length; j++) {
+
+								var jsonId = usGeoJSON.features[j].id;
+
+								if (dataId == jsonId) {
+									usGeoJSON.features[j].poverty = povertyValue;
+
+									break;
+								}
+							}
+						}
+
+						// merge detail data with topoJSON data
+						for (var i = 0; i < county_detail.length; i++) {
+
+							// get county id
+							var detailId = county_detail[i].CensusId;
+
+							// get value of total population and income per capita
+							var totalPopValue = parseFloat(county_detail[i].TotalPop),
+								incomePerCapValue = parseFloat(county_detail[i].IncomePerCap);
+
+							// loop through geojson and append poverty value
+							for (var j = 0; j < usGeoJSON.features.length; j++) {
+
+								var jsonId = usGeoJSON.features[j].id;
+
+								if (detailId == jsonId) {
+									usGeoJSON.features[j].TotalPop = totalPopValue;
+									usGeoJSON.features[j].IncomePerCap = incomePerCapValue;
+
+									break;
+								}
+							}
+						}
+
+					// make tool tip
+					tip = d3.tip()
+					  .attr('class', 'd3-tip')
+					  .offset([-10, 0])
+					  //.direction('n')
+					  .html(function(d) {
+
+					  	// extract id of county
+					    var countyId = d.id;
+
+					    // get state, county, poverty
+					    for (var i = 0; i < county_poverty.length; i++) {
+
+						    // get state name
+						    if (parseInt(county_poverty[i]["CensusId"])==countyId) {
+						    	var stateName = county_poverty[i]["State"];
+						    	var countyName = county_poverty[i]["County"];
+						    	var povertyRate = county_poverty[i]["Poverty"]
+						    	break;
+						    }
+					    }
+
+					    // get total population and income per capita values
+					    for (var i = 0; i < county_detail.length; i++) {
+
+					    	//get values
+					    	if (parseInt(county_detail[i]["CensusId"])==countyId) {
+					    		var popVal = county_detail[i].TotalPop;
+					    		var incomeCapValue = county_detail[i].IncomePerCap;
+					    		break;
+					    	}
+					    }
+
+					    // return tip values
+					    return "State: " + stateName +
+					    		"<br/>County: " + countyName +
+					    		"<br/>Poverty Rate: " + povertyRate + '%' +
+					    		"<br/>Total Population: " + popVal +
+					    		"<br/>Income per capita: " + incomeCapValue;
+
+					 });
+					    
+					svg.call(tip);
+
+					// bind geo data
+					svg.append("g")
+						.attr("class", "counties")
+						.selectAll("path")
+						.data(usGeoJSON.features)
+						.enter()
+						.append("path")
+						.attr("d", path)
+						.attr("fill", function(d) {
+
+							var poverty = d.poverty;
+
+							if (poverty) {
+								return colors(poverty);
+							} else {
+								return "#ccc";
+							}
+
+						})
+						.on('mouseover', function(d, i){
+						    
+						    var position = this;
+						  	
+						    tip.show(d, i);
+						  
+						    tip.attr('class', function(){
+
+						      if (position.getBBox().y < 75 && position.getBBox().x > 72) {
+						        return 'd3-tip down';
+						      } else if (position.getBBox().y < 75 && position.getBBox().x < 72) {
+						      	return 'd3-tip topleft';
+						      } else if (position.getBBox().x < 72) {
+						      	if (position.getBBox().x > 0) {
+						      		return 'd3-tip left';
+						      	} else {
+						      		return 'd3-tip alaska';
+						      	}
+						      } else {
+						        return 'd3-tip n';}
+						    })
+						  })
+      					.on('mouseout', tip.hide); 
+
+					// add state borders
+					 svg.append("path")
+					     .datum(topojson.mesh(us, us.objects.states, (a, b) => a !== b))
+					     .attr("fill", "none")
+					     .attr("stroke", "white")
+					     .attr("stroke-linejoin", "round")
+					     .attr("d", path);
+
+		            // add map title
+		            svg.append("text")
+		                .attr("text-anchor", "center")
+		                .attr("x", width /3)
+		                .attr("y", margin.top)
+		                .text("Choropleth Map of County Data")
+		                .style("font-size", "24px")
+		                .style("font-weight", 1000);
+
+		        	// initialize legend
+		        	svg.append("g")
+		        		.attr("class", "legend");
+
+					// make legend
+					var legend = svg.select("g.legend")
+
+					var legendBox = legend.selectAll("rect")
+						.data([0].concat(colors.quantiles()))
+						.enter()
+						.append("rect")
+						.attr("class", "border")
+						.attr("width", 22)
+						.attr("y", function(d, i) {return (margin.top * i) + padding;})
+						.attr("height", margin.top + 2)
+						.attr("x", width - padding - margin.right*2)
+						.style("fill", function(d, i) {return colors.range()[i];});
+
+					// append legend text
+					var legendText = legend.selectAll("text")
+						.data([0].concat(colors.quantiles()))
+						.enter()
+						.append("text")
+						.attr("class", "legend-text")
+						.text(function(d) {
+							if (Math.round(d)==9) {
+								return '≥ ' + Math.round(d) + '%'
+							} else {
+								return Math.round(d) + '%';
+							}})
+						.attr("y", function(d, i) {return (margin.top * i) + padding + margin.top / 1.3;})
+						.attr("x", width - padding - margin.right/2);
+
+		            // add legend title
+		            svg.append("text")
+		                .attr("text-anchor", "center")
+		                .attr("x", width - padding*2 - margin.right)
+		                .attr("y", padding - margin.top/2)
+		                .text("Poverty Rate")
+		                .style("font-size", "16px")
+		                .style("font-weight", 1000);
+
+
+			};
+
+		</script>
+	</body>
+</html>
